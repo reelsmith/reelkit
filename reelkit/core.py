@@ -106,6 +106,27 @@ def loudnorm(src: Path, dst: Path) -> dict:
     return stats
 
 
+def thumb_cmd(src: Path, dst: Path, at: float = 0.0) -> list[str]:
+    """Grab one full-quality frame (e.g. a cover image) at `at` seconds."""
+    return [
+        ffmpeg_bin(), "-y", "-ss", f"{at:.3f}", "-i", str(src),
+        "-frames:v", "1", "-q:v", "2", "-map_metadata", "-1", str(dst),
+    ]
+
+
+VIDEO_EXTS = {".mp4", ".mov", ".m4v", ".mkv", ".webm"}
+
+
+def collect_inputs(path: Path) -> list[Path]:
+    """A single file, or every video in a folder (skipping reelkit's own outputs)."""
+    if path.is_dir():
+        return sorted(
+            p for p in path.iterdir()
+            if p.suffix.lower() in VIDEO_EXTS and ".final" not in p.stem
+        )
+    return [path]
+
+
 def default_out(src: Path, suffix: str) -> Path:
     return src.with_name(f"{src.stem}.{suffix}{src.suffix}")
 

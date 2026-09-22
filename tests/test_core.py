@@ -60,3 +60,14 @@ def test_checklist_passes_finished_clip():
     info = {"width": 1080, "height": 1920, "duration": 9.5,
             "tags": ["compatible_brands", "major_brand", "minor_version"], "lufs": -14.2}
     assert all(ok for ok, _ in core.checklist(info))
+
+
+def test_collect_inputs_skips_non_video_and_finished(tmp_path):
+    for name in ("b.mp4", "a.MOV", "notes.txt", "a.final.mp4"):
+        (tmp_path / name).write_bytes(b"")
+    assert [p.name for p in core.collect_inputs(tmp_path)] == ["a.MOV", "b.mp4"]
+
+
+def test_thumb_seeks_before_input_for_speed():
+    cmd = core.thumb_cmd(Path("a.mp4"), Path("a.jpg"), at=1.5)
+    assert cmd.index("-ss") < cmd.index("-i") and "1.500" in cmd

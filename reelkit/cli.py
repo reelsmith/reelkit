@@ -47,13 +47,30 @@ def cmd_info(args):
     return 0 if ready else 2
 
 
-def cmd_finish(args):
-    """vertical -> loudnorm -> strip, the full delivery chain."""
+def cmd_thumb(args):
     src = Path(args.input)
-    final = _out(args, "final")
+    dst = Path(args.output) if args.output else src.with_name(f"{src.stem}.cover.jpg")
+    core.run(core.thumb_cmd(src, dst, at=args.at))
+    print(f"cover frame @ {args.at}s -> {dst}")
+
+
+def cmd_finish(args):
+    """vertical -> loudnorm -> strip, the full delivery chain. Accepts a folder."""
+    inputs = core.collect_inputs(Path(args.input))
+    if not inputs:
+        raise core.FFmpegError(f"no videos found in {args.input}")
+    if len(inputs) > 1 and args.output:
+        raise core.FFmpegError("-o can't be used with a folder; outputs go next to each input")
+    for i, src in enumerate(inputs, 1):
+        if len(inputs) > 1:
+            print(f"[{i}/{len(inputs)}] {src.name}")
+        _finish_one(src, Path(args.output) if args.output else core.default_out(src, "final"), args.zoom)
+
+
+def _finish_one(src: Path, final: Path, zoom: float):
     tmp1, tmp2 = final.with_suffix(".tmp1.mp4"), final.with_suffix(".tmp2.mp4")
     try:
-        core.run(core.vertical_cmd(src, tmp1, zoom=args.zoom))
+        core.run(core.vertical_cmd(src, tmp1, zoom=zoom))
         core.loudnorm(tmp1, tmp2)
         core.run(core.strip_cmd(tmp2, final))
     finally:
@@ -84,7 +101,9 @@ def build_parser() -> argparse.ArgumentParser:
     i = sub.add_parser("info", help="check a clip against the TikTok/Reels/Shorts spec")
     i.add_argument("input")
     i.set_defaults(func=cmd_info)
-    f = add("finish", cmd_finish, "vertical + loudnorm + strip in one go")
+    t = add("thumb", cmd_thumb, "export a cover frame as JPG")
+    t.add_argument("--at", type=float, default=0.0, help="timestamp in seconds")
+    f = add("finish", cmd_finish, "vertical + loudnorm + strip in one go (file or folder)")
     f.add_argument("--zoom", type=float, default=1.0)
     return p
 
