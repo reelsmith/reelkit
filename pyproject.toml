@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reelkit"
+version = "0.1.0"
+description = "Finish short-form video for TikTok, Reels and Shorts: 9:16 reframe, -14 LUFS loudness, metadata strip, faststart."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+keywords = ["ffmpeg", "tiktok", "reels", "shorts", "video", "creator"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Multimedia :: Video :: Conversion",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+reelkit = "reelkit.cli:main"
+
+[tool.setuptools]
+packages = ["reelkit"]
