@@ -48,3 +48,15 @@ def test_dry_run_prints_instead_of_running(monkeypatch, capsys):
 def test_cli_parses_finish():
     args = build_parser().parse_args(["finish", "in.mp4", "--zoom", "1.05"])
     assert args.command == "finish" and args.zoom == 1.05
+
+
+def test_checklist_flags_wrong_resolution_and_loudness():
+    info = {"width": 1280, "height": 720, "duration": 12.0, "tags": ["encoder"], "lufs": -22.0}
+    results = dict((msg.split()[0], ok) for ok, msg in core.checklist(info))
+    assert results == {"resolution": False, "duration": True, "metadata": False, "loudness": False}
+
+
+def test_checklist_passes_finished_clip():
+    info = {"width": 1080, "height": 1920, "duration": 9.5,
+            "tags": ["compatible_brands", "major_brand", "minor_version"], "lufs": -14.2}
+    assert all(ok for ok, _ in core.checklist(info))

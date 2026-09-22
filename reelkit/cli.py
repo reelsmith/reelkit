@@ -37,6 +37,16 @@ def cmd_loud(args):
     print(f"input {stats['input_i']} LUFS -> {core.TARGET_LUFS} LUFS -> {dst}")
 
 
+def cmd_info(args):
+    info = core.probe(Path(args.input))
+    checks = core.checklist(info)
+    for ok, msg in checks:
+        print(f"  [{'ok' if ok else '!!'}] {msg}")
+    ready = all(ok for ok, _ in checks)
+    print("ready to post" if ready else "run `reelkit finish` to fix")
+    return 0 if ready else 2
+
+
 def cmd_finish(args):
     """vertical -> loudnorm -> strip, the full delivery chain."""
     src = Path(args.input)
@@ -71,6 +81,9 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--zoom", type=float, default=1.0)
     v.add_argument("--crf", type=int, default=18)
     add("loud", cmd_loud, "two-pass loudnorm to -14 LUFS")
+    i = sub.add_parser("info", help="check a clip against the TikTok/Reels/Shorts spec")
+    i.add_argument("input")
+    i.set_defaults(func=cmd_info)
     f = add("finish", cmd_finish, "vertical + loudnorm + strip in one go")
     f.add_argument("--zoom", type=float, default=1.0)
     return p
@@ -80,11 +93,10 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     core.DRY_RUN = args.dry_run
     try:
-        args.func(args)
+        return args.func(args) or 0
     except core.FFmpegError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
-    return 0
 
 
 if __name__ == "__main__":

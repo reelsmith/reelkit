@@ -12,6 +12,8 @@ TARGET_W, TARGET_H = 1080, 1920
 TARGET_LUFS = -14.0
 TARGET_TP = -1.5
 TARGET_LRA = 11.0
+# MP4 file-type atoms every muxer writes; not identifying metadata
+BRAND_TAGS = {"major_brand", "minor_version", "compatible_brands"}
 
 
 class FFmpegError(RuntimeError):
@@ -106,3 +108,54 @@ def loudnorm(src: Path, dst: Path) -> dict:
 
 def default_out(src: Path, suffix: str) -> Path:
     return src.with_name(f"{src.stem}.{suffix}{src.suffix}")
+
+
+def probe(src: Path) -> dict:
+    """Resolution, duration, fps and loudness of a clip, for a quick pre-post check."""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        raise FFmpegError("ffprobe not found on PATH")
+    meta = json.loads(run_capture([
+        ffprobe, "-v", "error", "-show_streams", "-show_format", "-of", "json", str(src),
+    ]))
+    video = next((s for s in meta["streams"] if s["codec_type"] == "video"), {})
+    has_audio = any(s["codec_type"] == "audio" for s in meta["streams"])
+    num, den = (video.get("r_frame_rate") or "0/1").split("/")
+    info = {
+        "width": video.get("width"),
+        "height": video.get("height"),
+        "fps": round(int(num) / int(den), 2) if int(den) else 0,
+        "duration": round(float(meta["format"].get("duration", 0)), 2),
+        "tags": sorted(meta["format"].get("tags", {})),
+        "lufs": None,
+    }
+    if has_audio:
+        stderr = subprocess.run(
+            [ffmpeg_bin(), "-hide_banner", "-i", str(src), "-af", loudnorm_filter(), "-vn", "-f", "null", "-"],
+            capture_output=True, text=True,
+        ).stderr
+        info["lufs"] = float(parse_loudnorm(stderr)["input_i"])
+    return info
+
+
+def checklist(info: dict) -> list[tuple[bool, str]]:
+    """Pass/fail checks against the short-form delivery spec."""
+    extra = sorted(set(info["tags"]) - BRAND_TAGS)
+    checks = [
+        (info["width"] == TARGET_W and info["height"] == TARGET_H,
+         f"resolution {info['width']}x{info['height']} (want {TARGET_W}x{TARGET_H})"),
+        (0 < info["duration"] <= 180, f"duration {info['duration']}s (want <= 180s)"),
+        (not extra, f"metadata tags present: {', '.join(extra)}" if extra else "metadata clean"),
+    ]
+    if info["lufs"] is None:
+        checks.append((False, "no audio track"))
+    else:
+        checks.append((abs(info["lufs"] - TARGET_LUFS) <= 1.0, f"loudness {info['lufs']} LUFS (want {TARGET_LUFS})"))
+    return checks
+
+
+def run_capture(args: list[str]) -> str:
+    proc = subprocess.run(args, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise FFmpegError(proc.stderr.strip() or "ffprobe failed")
+    return proc.stdout
