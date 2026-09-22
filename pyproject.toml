@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reelkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Finish short-form video for TikTok, Reels and Shorts: 9:16 reframe, -14 LUFS loudness, metadata strip, faststart."
 readme = "README.md"
 license = { text = "MIT" }

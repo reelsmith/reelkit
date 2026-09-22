@@ -11,6 +11,7 @@ Raw clips from phones, editors and AI video tools come out in the wrong shape, a
 | `strip` | Removes all container and stream metadata and chapters, without re-encoding |
 | `faststart` | Moves the `moov` atom to the front so the video starts playing instantly |
 | `finish` | Runs `vertical`, then `loud`, then `strip` in one go |
+| `info` | Checks a clip against the spec and says whether it's ready to post |
 
 ## Install
 
@@ -48,6 +49,8 @@ reelkit vertical landscape.mov -o out.mp4
 reelkit loud voiceover_mix.mp4
 reelkit strip export.mp4
 reelkit faststart export.mp4
+reelkit info final.mp4                 # pass/fail checklist, exit code 0 = ready
+reelkit --dry-run finish raw.mp4       # print the ffmpeg commands without running them
 ```
 
 If you don't pass `-o`, the output is written next to the input with a suffix, for example `clip.clean.mp4` or `clip.9x16.mp4`.
