@@ -25,7 +25,13 @@ def ffmpeg_bin() -> str:
     return path
 
 
+DRY_RUN = False
+
+
 def run(args: list[str]) -> subprocess.CompletedProcess:
+    if DRY_RUN:
+        print(" ".join(f'"{a}"' if " " in a else a for a in args))
+        return subprocess.CompletedProcess(args, 0, "", "")
     proc = subprocess.run(args, capture_output=True, text=True)
     if proc.returncode != 0:
         raise FFmpegError(proc.stderr.strip().splitlines()[-1] if proc.stderr else "ffmpeg failed")
@@ -84,11 +90,12 @@ def parse_loudnorm(stderr: str) -> dict:
 
 def loudnorm(src: Path, dst: Path) -> dict:
     """Two-pass EBU R128 normalisation to -14 LUFS. Returns the first-pass stats."""
-    probe = subprocess.run(
-        [ffmpeg_bin(), "-hide_banner", "-i", str(src), "-af", loudnorm_filter(), "-f", "null", "-"],
-        capture_output=True, text=True,
-    )
-    stats = parse_loudnorm(probe.stderr)
+    analyse = [ffmpeg_bin(), "-hide_banner", "-i", str(src), "-af", loudnorm_filter(), "-f", "null", "-"]
+    if DRY_RUN:
+        run(analyse)
+        stats = {k: "<measured>" for k in ("input_i", "input_tp", "input_lra", "input_thresh", "target_offset")}
+    else:
+        stats = parse_loudnorm(subprocess.run(analyse, capture_output=True, text=True).stderr)
     run([
         ffmpeg_bin(), "-y", "-i", str(src), "-af", loudnorm_filter(stats),
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",

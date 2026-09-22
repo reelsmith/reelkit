@@ -39,6 +39,12 @@ def test_default_out_naming():
     assert core.default_out(Path("clips/hook.mp4"), "clean") == Path("clips/hook.clean.mp4")
 
 
+def test_dry_run_prints_instead_of_running(monkeypatch, capsys):
+    monkeypatch.setattr(core, "DRY_RUN", True)
+    core.run(core.faststart_cmd(Path("a.mp4"), Path("b.mp4")))
+    assert "+faststart" in capsys.readouterr().out
+
+
 def test_cli_parses_finish():
     args = build_parser().parse_args(["finish", "in.mp4", "--zoom", "1.05"])
     assert args.command == "finish" and args.zoom == 1.05

@@ -55,6 +55,7 @@ def cmd_finish(args):
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="reelkit", description="Finish short-form video for TikTok / Reels / Shorts.")
     p.add_argument("--version", action="version", version=f"reelkit {__version__}")
+    p.add_argument("--dry-run", action="store_true", help="print the ffmpeg commands instead of running them")
     sub = p.add_subparsers(dest="command", required=True)
 
     def add(name, fn, help_):
@@ -77,6 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+    core.DRY_RUN = args.dry_run
     try:
         args.func(args)
     except core.FFmpegError as e:
