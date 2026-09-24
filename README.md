@@ -14,6 +14,33 @@ Raw clips from phones, editors and AI video tools come out in the wrong shape, a
 | `thumb` | Saves a full-quality cover frame as a JPG at any timestamp |
 | `info` | Checks a clip against the spec and says whether it's ready to post |
 
+## Example
+
+A landscape export straight out of an editor, checked before and after:
+
+```text
+$ reelkit info IMG_4471.mp4
+  [!!] resolution 1920x1080 (want 1080x1920)
+  [ok] duration 8.0s (want <= 180s)
+  [!!] metadata tags present: encoder, title
+  [!!] loudness -21.85 LUFS (want -14.0)
+run `reelkit finish` to fix
+
+$ reelkit finish IMG_4471.mp4 --zoom 1.05
+ready to post -> IMG_4471.final.mp4
+
+$ reelkit info IMG_4471.final.mp4
+  [ok] resolution 1080x1920 (want 1080x1920)
+  [ok] duration 8.1s (want <= 180s)
+  [ok] metadata clean
+  [ok] loudness -13.99 LUFS (want -14.0)
+ready to post
+```
+
+## Why I built this
+
+I post a lot of short-form product videos, and every clip went through the same manual routine: reframe to 9:16, fix the loudness so it didn't sound quiet next to everything else in the feed, strip the editor and camera metadata, and make sure it starts playing instantly. I kept a text file of ffmpeg commands and pasted them in one by one. reelkit is that text file turned into one command.
+
 ## Install
 
 You need **Python 3.9+** and **[ffmpeg](https://ffmpeg.org/download.html)** on your PATH.
